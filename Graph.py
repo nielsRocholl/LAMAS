@@ -4,7 +4,7 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-n', '--nodes', type=int, help='Number of nodes', default=10)
+parser.add_argument('-a', '--agents', type=int, help='Number of agents', default=10)
 parser.add_argument('-c', '--connectivity', type=int, help='Connectivity of graph', default=2)
 
 '''
@@ -13,14 +13,14 @@ Class that holds the graph, it uses networkx to create/alter/visualize the graph
 
 
 class Graph:
-    def __init__(self, nodes, connectivity):
-        self.number_of_nodes = nodes
+    def __init__(self, agents, connectivity):
+        self.number_of_agents = agents
         self.connectivity = connectivity
         self.G = self.create_graph()
-        self.node_pos = nx.spring_layout(self.G, seed=self.number_of_nodes)  # stores position of nodes
-        self.color_map = np.empty(nodes, str)  # stores node colors, needed for draw()
-        self.all_nodes_infected = False
-        self.infected = [1]
+        self.node_pos = nx.spring_layout(self.G, seed=self.number_of_agents)  # stores position of nodes
+        self.color_map = np.empty(agents, str)  # stores node colors, needed for draw()
+        self.all_agents_know = False
+        self.rumor_is_known = [1]
         self.init_node_data()
 
     def create_graph(self):
@@ -28,20 +28,20 @@ class Graph:
         G = nx.Graph()
 
         # add nodes
-        G.add_nodes_from(range(self.number_of_nodes))
+        G.add_nodes_from(range(self.number_of_agents))
 
         # add edges according to connectivity
-        for node in range(self.number_of_nodes):
+        for node in range(self.number_of_agents):
             for i in range(self.connectivity):
-                G.add_edge(node, np.random.randint(self.number_of_nodes))
+                G.add_edge(node, np.random.randint(self.number_of_agents))
         return G
 
     '''
-    Each node can store data, this function creates a data variable 'infected' and sets it to false
+    Each node can store data, this function creates a data variable 'rumor_is_known' and sets it to false
     '''
 
     def init_node_data(self):
-        nx.set_node_attributes(self.G, False, "infected")
+        nx.set_node_attributes(self.G, False, "rumor_is_known")
 
     '''
     Networkx needs a color map to draw the graph (with color), this function updates the color map
@@ -49,7 +49,7 @@ class Graph:
 
     def update_color_map(self):
         for node in self.G.nodes:
-            if self.G.nodes[node]['infected']:
+            if self.G.nodes[node]['rumor_is_known']:
                 self.color_map[node] = 'red'
             else:
                 self.color_map[node] = 'green'
@@ -67,71 +67,71 @@ class Graph:
         plt.close()
 
     '''
-    Infect a single node
+    Spread rumor to a single agent
     '''
 
-    def infect_node(self, node):
-        if not self.G.nodes[node]['infected']:
-            self.G.nodes[node]['infected'] = True
+    def spread_rumor_to_single_agent(self, node):
+        if not self.G.nodes[node]['rumor_is_known']:
+            self.G.nodes[node]['rumor_is_known'] = True
 
     '''
-    Infect all neighboring nodes
+    Spread rumor to all neighboring agents
     '''
 
-    def infect_all_neighbours(self):
-        infected_nodes = [x for x, y in self.G.nodes(data=True) if y['infected']]
+    def spread_rumor_to_all_neighbours(self):
+        agent_that_know = [x for x, y in self.G.nodes(data=True) if y['rumor_is_known']]
 
-        for infected_node in infected_nodes:
-            for node in self.G.neighbors(infected_node):
-                self.infect_node(node)
+        for knowledgeable_agent in agent_that_know:
+            for agent in self.G.neighbors(knowledgeable_agent):
+                self.spread_rumor_to_single_agent(agent)
 
     '''
-    Count the amount of infected nodes
+    Count the amount of knowledgeable agents
     '''
 
-    def count_infected(self):
-        infected = 0
-        for node in self.G.nodes:
-            if self.G.nodes[node]['infected']:
-                infected += 1
+    def count_knowledgeable(self):
+        knowledgeable = 0
+        for agent in self.G.nodes:
+            if self.G.nodes[agent]['rumor_is_known']:
+                knowledgeable += 1
 
-        return infected
+        return knowledgeable
 
     '''
     Update the graph
     '''
 
     def update(self):
-        self.infected.append(self.count_infected())
-        self.all_nodes_infected = True if self.count_infected() == self.number_of_nodes else False
-        self.infect_all_neighbours()
+        self.rumor_is_known.append(self.count_knowledgeable())
+        self.all_agents_know = True if self.count_knowledgeable() == self.number_of_agents else False
+        self.spread_rumor_to_all_neighbours()
 
     '''
-    Simple function that draws the infected nodes over time
+    Simple function that draws the knowledgeable agents over time
     '''
 
     def plot_data(self):
         plt.clf()
-        plt.ylabel('Infected nodes')
+        plt.ylabel('Knowledgeable Agents')
         plt.xlabel('Time step')
-        plt.title('Infected nodes over time')
-        plt.plot(self.infected, label='Infected Nodes')
+        plt.title('Knowledgeable agents over time')
+        plt.plot(self.rumor_is_known, label='Knowledgeable Agents')
         plt.legend()
         plt.show()
 
 
 '''
-Simulate virus spreading
+Simulate rumor spreading
 '''
 
 
-def simulate(nodes, connectivity):
-    random = np.random.randint(nodes)
+def simulate(agents, connectivity):
+    random = np.random.randint(agents)
 
-    G = Graph(nodes, connectivity)
-    G.infect_node(random)
+    G = Graph(agents, connectivity)
+    G.spread_rumor_to_single_agent(random)
 
-    while not G.all_nodes_infected:
+    while not G.all_agents_know:
         G.draw_graph()
         G.update()
     G.plot_data()
@@ -139,7 +139,7 @@ def simulate(nodes, connectivity):
 
 def main():
     args = parser.parse_args()
-    simulate(args.nodes, args.connectivity)
+    simulate(args.agents, args.connectivity)
 
 
 if __name__ == '__main__':
