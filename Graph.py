@@ -60,10 +60,11 @@ class Graph:
     '''
 
     def draw_graph(self):
+        plt.figure(figsize=(9, 7))
         self.update_color_map()
         nx.draw(self.G, node_color=self.color_map, with_labels=True, pos=self.node_pos)
         plt.show(block=False)
-        plt.pause(1)
+        plt.pause(1.5)
         plt.close()
 
     '''
