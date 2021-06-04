@@ -21,6 +21,8 @@ class Graph:
         self.color_map = np.empty(agents, str)  # stores node colors, needed for draw()
         self.all_agents_know = False
         self.rumor_is_known = [1]
+        self.E_known = [1]
+        self.EE_known = [1]
         self.init_node_data()
 
     def create_graph(self):
@@ -42,6 +44,13 @@ class Graph:
 
     def init_node_data(self):
         nx.set_node_attributes(self.G, False, "rumor_is_known")
+
+        # Everybody knows attributes
+        nx.set_node_attributes(self.G, [], "who_knows_list")
+        nx.set_node_attributes(self.G, False, "E_knows")
+        nx.set_node_attributes(self.G, [], "who_knows_E_knows_list")
+        nx.set_node_attributes(self.G, False, "EE_knows")
+
 
     '''
     Networkx needs a color map to draw the graph (with color), this function updates the color map
@@ -68,12 +77,47 @@ class Graph:
         plt.close()
 
     '''
+    Spread rumor to the first agent
+    '''
+
+    def spread_rumor_to_first_agent(self, node):
+        if not self.G.nodes[node]['rumor_is_known']:
+            self.G.nodes[node]['rumor_is_known'] = True
+
+        # I know that I know
+        if not self.G.nodes[node]['who_knows_list']:
+            self.G.nodes[node]['who_knows_list'] = [node]
+
+
+
+    '''
     Spread rumor to a single agent
     '''
 
-    def spread_rumor_to_single_agent(self, node):
+    def spread_rumor_to_single_agent(self, node, previous_node):
         if not self.G.nodes[node]['rumor_is_known']:
             self.G.nodes[node]['rumor_is_known'] = True
+        
+        # Everybody knows rumor spread part
+        if not self.G.nodes[node]['who_knows_list']:
+            self.G.nodes[node]['who_knows_list'] = [node]
+
+        newList = list( set( self.G.nodes[node]['who_knows_list'] ) | set( self.G.nodes[previous_node]['who_knows_list'] ) )
+        self.G.nodes[node]['who_knows_list'] = newList
+
+        if set(self.G.nodes[node]['who_knows_list']) == set(list(self.G.nodes)):
+            self.G.nodes[node]['E_knows'] = True
+        
+        if not self.G.nodes[node]['who_knows_E_knows_list'] and self.G.nodes[node]['E_knows']:
+            self.G.nodes[node]['who_knows_E_knows_list'] = [node]
+
+        newList = list( set( self.G.nodes[node]['who_knows_E_knows_list'] ) | set( self.G.nodes[previous_node]['who_knows_E_knows_list'] ) )
+        self.G.nodes[node]['who_knows_E_knows_list'] = newList
+
+        if set(self.G.nodes[node]['who_knows_E_knows_list']) == set(list(self.G.nodes)):
+            self.G.nodes[node]['EE_knows'] = True
+
+            
 
     '''
     Spread rumor to all neighboring agents
@@ -84,16 +128,16 @@ class Graph:
 
         for knowledgeable_agent in agent_that_know:
             for agent in self.G.neighbors(knowledgeable_agent):
-                self.spread_rumor_to_single_agent(agent)
+                self.spread_rumor_to_single_agent(agent, knowledgeable_agent)
 
     '''
     Count the amount of knowledgeable agents
     '''
 
-    def count_knowledgeable(self):
+    def count_knowledgeable(self, knowledge):
         knowledgeable = 0
         for agent in self.G.nodes:
-            if self.G.nodes[agent]['rumor_is_known']:
+            if self.G.nodes[agent][knowledge]:
                 knowledgeable += 1
 
         return knowledgeable
@@ -103,8 +147,13 @@ class Graph:
     '''
 
     def update(self):
-        self.rumor_is_known.append(self.count_knowledgeable())
-        self.all_agents_know = True if self.count_knowledgeable() == self.number_of_agents else False
+        # keep track of knowledge
+        self.rumor_is_known.append(self.count_knowledgeable('rumor_is_known'))
+        self.E_known.append(self.count_knowledgeable('E_knows'))
+        self.EE_known.append(self.count_knowledgeable('EE_knows'))
+
+        # check if termination condition is met
+        self.all_agents_know = True if self.count_knowledgeable('EE_knows') == self.number_of_agents else False
         self.spread_rumor_to_all_neighbours()
 
     '''
@@ -117,6 +166,8 @@ class Graph:
         plt.xlabel('Time step')
         plt.title('Knowledgeable agents over time')
         plt.plot(self.rumor_is_known, label='Knowledgeable Agents')
+        plt.plot(self.E_known, label='E-Knowledgeable Agents')
+        plt.plot(self.EE_known, label='EE-Knowledgeable Agents')
         plt.legend()
         plt.show()
 
@@ -130,7 +181,7 @@ def simulate(agents, connectivity):
     random = np.random.randint(agents)
 
     G = Graph(agents, connectivity)
-    G.spread_rumor_to_single_agent(random)
+    G.spread_rumor_to_first_agent(random)
 
     while not G.all_agents_know:
         G.draw_graph()
