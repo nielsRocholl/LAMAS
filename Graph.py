@@ -2,10 +2,13 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
+from itertools import repeat, combinations
+from string import ascii_lowercase
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-a', '--agents', type=int, help='Number of agents', default=10)
 parser.add_argument('-c', '--connectivity', type=int, help='Connectivity of graph', default=2)
+parser.add_argument('-n', '--degree_of_shared_knowledge', type=int, help='Degree of shared knowledge', default=2)
 
 '''
 Class that holds the graph, it uses networkx to create/alter/visualize the graph
@@ -13,17 +16,18 @@ Class that holds the graph, it uses networkx to create/alter/visualize the graph
 
 
 class Graph:
-    def __init__(self, agents, connectivity):
+    def __init__(self, agents, connectivity, degree_of_shared_knowledge):
         self.number_of_agents = agents
         self.connectivity = connectivity
         self.G = self.create_graph()
         self.node_pos = nx.spring_layout(self.G, seed=self.number_of_agents)  # stores position of nodes
         self.color_map = np.empty(agents, str)  # stores node colors, needed for draw()
         self.all_agents_know = False
+        self.degree_of_shared_knowledge = degree_of_shared_knowledge
         self.rumor_is_known = [1]
-        self.E_known = [1]
-        self.EE_known = [1]
+        self.dynamic_E_known = [[] for x in repeat(None, degree_of_shared_knowledge)]
         self.init_node_data()
+        self.labels = {}
 
     def create_graph(self):
         # create graph
@@ -45,12 +49,10 @@ class Graph:
     def init_node_data(self):
         nx.set_node_attributes(self.G, False, "rumor_is_known")
 
-        # Everybody knows attributes
-        nx.set_node_attributes(self.G, [], "who_knows_list")
-        nx.set_node_attributes(self.G, False, "E_knows")
-        nx.set_node_attributes(self.G, [], "who_knows_E_knows_list")
-        nx.set_node_attributes(self.G, False, "EE_knows")
-
+        # Everybody knows attributes, attribute name is an integer from [0-n]
+        for n in range(self.degree_of_shared_knowledge):
+            nx.set_node_attributes(self.G, [], str(n))
+            nx.set_node_attributes(self.G, False, f'{n}_knows')
 
     '''
     Networkx needs a color map to draw the graph (with color), this function updates the color map
@@ -71,9 +73,14 @@ class Graph:
     def draw_graph(self):
         plt.figure(figsize=(9, 7))
         self.update_color_map()
-        nx.draw(self.G, node_color=self.color_map, with_labels=True, pos=self.node_pos)
+        # nx.draw(self.G, node_color=self.color_map, pos=self.node_pos)
+        nx.draw_networkx_nodes(self.G, self.node_pos)
+        nx.draw_networkx_edges(self.G, self.node_pos)
+        # nx.draw_networkx_labels(self.G, self.node_pos, self.labels)
+        nx.draw_networkx_labels(self.G, self.node_pos, self.labels, font_size=16)
+
         plt.show(block=False)
-        plt.pause(1.5)
+        plt.pause(0.5)
         plt.close()
 
     '''
@@ -85,39 +92,35 @@ class Graph:
             self.G.nodes[node]['rumor_is_known'] = True
 
         # I know that I know
-        if not self.G.nodes[node]['who_knows_list']:
-            self.G.nodes[node]['who_knows_list'] = [node]
+        if not self.G.nodes[node][str(0)]:
+            self.G.nodes[node][str(0)] = [node]
 
+    def spread_rumor_to_single_agent2(self, agent, previous_agent):
 
+        if not self.G.nodes[agent]['rumor_is_known']:
+            self.G.nodes[agent]['rumor_is_known'] = True
 
-    '''
-    Spread rumor to a single agent
-    '''
+        for n in range(self.degree_of_shared_knowledge):
+            if n == 0:
+                if not self.G.nodes[agent][f'{n}']:
+                    self.G.nodes[agent][f'{n}'] = [agent]
 
-    def spread_rumor_to_single_agent(self, node, previous_node):
-        if not self.G.nodes[node]['rumor_is_known']:
-            self.G.nodes[node]['rumor_is_known'] = True
-        
-        # Everybody knows rumor spread part
-        if not self.G.nodes[node]['who_knows_list']:
-            self.G.nodes[node]['who_knows_list'] = [node]
+                self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
 
-        newList = list( set( self.G.nodes[node]['who_knows_list'] ) | set( self.G.nodes[previous_node]['who_knows_list'] ) )
-        self.G.nodes[node]['who_knows_list'] = newList
+                if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
+                    self.G.nodes[agent][f'{n}_knows'] = True
 
-        if set(self.G.nodes[node]['who_knows_list']) == set(list(self.G.nodes)):
-            self.G.nodes[node]['E_knows'] = True
-        
-        if not self.G.nodes[node]['who_knows_E_knows_list'] and self.G.nodes[node]['E_knows']:
-            self.G.nodes[node]['who_knows_E_knows_list'] = [node]
+            if n > 0:
+                if not self.G.nodes[agent][f'{n}'] and self.G.nodes[agent][f'{n - 1}_knows']:
+                    self.G.nodes[agent][f'{n}'] = [agent]
 
-        newList = list( set( self.G.nodes[node]['who_knows_E_knows_list'] ) | set( self.G.nodes[previous_node]['who_knows_E_knows_list'] ) )
-        self.G.nodes[node]['who_knows_E_knows_list'] = newList
+                self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
 
-        if set(self.G.nodes[node]['who_knows_E_knows_list']) == set(list(self.G.nodes)):
-            self.G.nodes[node]['EE_knows'] = True
+                if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
+                    self.G.nodes[agent][f'{n}_knows'] = True
 
-            
+    def new_list(self, agent, previous_agent, n):
+        return list(set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[previous_agent][f'{n}']))
 
     '''
     Spread rumor to all neighboring agents
@@ -128,7 +131,7 @@ class Graph:
 
         for knowledgeable_agent in agent_that_know:
             for agent in self.G.neighbors(knowledgeable_agent):
-                self.spread_rumor_to_single_agent(agent, knowledgeable_agent)
+                self.spread_rumor_to_single_agent2(agent, knowledgeable_agent)
 
     '''
     Count the amount of knowledgeable agents
@@ -146,14 +149,16 @@ class Graph:
     Update the graph
     '''
 
-    def update(self):
+    def update(self, degree_of_shared_knowlegde):
         # keep track of knowledge
         self.rumor_is_known.append(self.count_knowledgeable('rumor_is_known'))
-        self.E_known.append(self.count_knowledgeable('E_knows'))
-        self.EE_known.append(self.count_knowledgeable('EE_knows'))
+
+        for idx, n in enumerate(self.dynamic_E_known):
+            n.append(self.count_knowledgeable(f'{idx}_knows'))
 
         # check if termination condition is met
-        self.all_agents_know = True if self.count_knowledgeable('EE_knows') == self.number_of_agents else False
+        self.all_agents_know = True if self.count_knowledgeable(
+            f'{degree_of_shared_knowlegde - 1}_knows') == self.number_of_agents else False
         self.spread_rumor_to_all_neighbours()
 
     '''
@@ -166,8 +171,9 @@ class Graph:
         plt.xlabel('Time step')
         plt.title('Knowledgeable agents over time')
         plt.plot(self.rumor_is_known, label='Knowledgeable Agents')
-        plt.plot(self.E_known, label='E-Knowledgeable Agents')
-        plt.plot(self.EE_known, label='EE-Knowledgeable Agents')
+        for idx, n in enumerate(self.dynamic_E_known):
+            plt.plot(n, label=f'{idx}_knowledgeable')
+
         plt.legend()
         plt.show()
 
@@ -177,21 +183,28 @@ Simulate rumor spreading
 '''
 
 
-def simulate(agents, connectivity):
+def simulate(agents, connectivity, degree_of_shared_knowledge):
     random = np.random.randint(agents)
 
-    G = Graph(agents, connectivity)
+    G = Graph(agents, connectivity, degree_of_shared_knowledge)
     G.spread_rumor_to_first_agent(random)
 
     while not G.all_agents_know:
-        G.draw_graph()
-        G.update()
+        # G.draw_graph()
+        G.update(degree_of_shared_knowledge)
     G.plot_data()
 
 
 def main():
     args = parser.parse_args()
-    simulate(args.agents, args.connectivity)
+    agents = [20, 40, 80]
+    connectivity = [2, 10, 20]
+    degree_of_shared_knowledge = [2, 4, 10]
+
+    for experiment in range(3):
+        simulate(agents[experiment], connectivity[experiment], degree_of_shared_knowledge[experiment])
+
+    # simulate(args.agents, args.connectivity, args.degree_of_shared_knowledge)
 
 
 if __name__ == '__main__':
