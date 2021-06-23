@@ -1,5 +1,7 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+from networkx.classes.function import degree
+from networkx.readwrite.json_graph import tree
 import numpy as np
 import argparse
 from itertools import repeat, combinations
@@ -9,6 +11,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-a', '--agents', type=int, help='Number of agents', default=10)
 parser.add_argument('-c', '--connectivity', type=int, help='Connectivity of graph', default=2)
 parser.add_argument('-n', '--degree_of_shared_knowledge', type=int, help='Degree of shared knowledge', default=2)
+
+
 
 '''
 Class that holds the graph, it uses networkx to create/alter/visualize the graph
@@ -52,6 +56,7 @@ class Graph:
         # Everybody knows attributes, attribute name is an integer from [0-n]
         for n in range(self.degree_of_shared_knowledge):
             nx.set_node_attributes(self.G, [], str(n))
+            nx.set_node_attributes(self.G, [], f'{n}_next_step_knowledge')
             nx.set_node_attributes(self.G, False, f'{n}_knows')
 
     '''
@@ -105,22 +110,36 @@ class Graph:
                 if not self.G.nodes[agent][f'{n}']:
                     self.G.nodes[agent][f'{n}'] = [agent]
 
-                self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
+                
+                # self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
+                # if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
+                #     self.G.nodes[agent][f'{n}_knows'] = True
 
-                if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
-                    self.G.nodes[agent][f'{n}_knows'] = True
+                self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.new_list(agent, previous_agent, n)
 
             if n > 0:
                 if not self.G.nodes[agent][f'{n}'] and self.G.nodes[agent][f'{n - 1}_knows']:
+                    print(n)
                     self.G.nodes[agent][f'{n}'] = [agent]
 
-                self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
 
-                if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
-                    self.G.nodes[agent][f'{n}_knows'] = True
+                # self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
+                # if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
+                #     self.G.nodes[agent][f'{n}_knows'] = True
+
+
+                self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.new_list(agent, previous_agent, n)
 
     def new_list(self, agent, previous_agent, n):
-        return list(set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[previous_agent][f'{n}']))
+        return list(set(self.G.nodes[agent][f'{n}_next_step_knowledge']) | set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[previous_agent][f'{n}']))
+
+    def update_knowledge(self, agent):
+        for n in range(self.degree_of_shared_knowledge):
+
+            self.G.nodes[agent][f'{n}'] = list(set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[agent][f'{n}_next_step_knowledge']))
+
+            if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
+                self.G.nodes[agent][f'{n}_knows'] = True
 
     '''
     Spread rumor to all neighboring agents
@@ -129,9 +148,16 @@ class Graph:
     def spread_rumor_to_all_neighbours(self):
         agent_that_know = [x for x, y in self.G.nodes(data=True) if y['rumor_is_known']]
 
+        updateable_agents = []
+
         for knowledgeable_agent in agent_that_know:
             for agent in self.G.neighbors(knowledgeable_agent):
                 self.spread_rumor_to_single_agent2(agent, knowledgeable_agent)
+                updateable_agents.append(agent)
+        
+        updateable_agents = list(set(updateable_agents))
+        for agent in updateable_agents:
+            self.update_knowledge(agent)
 
     '''
     Count the amount of knowledgeable agents
@@ -149,7 +175,7 @@ class Graph:
     Update the graph
     '''
 
-    def update(self, degree_of_shared_knowlegde):
+    def update(self, degree_of_shared_knowledge):
         # keep track of knowledge
         self.rumor_is_known.append(self.count_knowledgeable('rumor_is_known'))
 
@@ -158,7 +184,7 @@ class Graph:
 
         # check if termination condition is met
         self.all_agents_know = True if self.count_knowledgeable(
-            f'{degree_of_shared_knowlegde - 1}_knows') == self.number_of_agents else False
+            f'{degree_of_shared_knowledge - 1}_knows') == self.number_of_agents else False
         self.spread_rumor_to_all_neighbours()
 
     '''
@@ -197,11 +223,16 @@ def simulate(agents, connectivity, degree_of_shared_knowledge):
 
 def main():
     args = parser.parse_args()
-    agents = [20, 40, 80]
-    connectivity = [2, 10, 20]
-    degree_of_shared_knowledge = [2, 4, 10]
+    experiment_size = 1 # 3
+    # agents = [20, 40, 80]
+    # connectivity = [2, 10, 20]
+    # degree_of_shared_knowledge = [2, 4, 10]
+    agents = [5]
+    connectivity = [5]
+    degree_of_shared_knowledge = [10]
 
-    for experiment in range(3):
+
+    for experiment in range(experiment_size):
         simulate(agents[experiment], connectivity[experiment], degree_of_shared_knowledge[experiment])
 
     # simulate(args.agents, args.connectivity, args.degree_of_shared_knowledge)
