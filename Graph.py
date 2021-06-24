@@ -1,5 +1,7 @@
+import matplotlib
 import networkx as nx
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 from networkx.classes.function import degree
 from networkx.generators.classic import complete_graph
 from networkx.readwrite.json_graph import tree
@@ -7,6 +9,8 @@ import numpy as np
 import argparse
 from itertools import repeat, combinations
 from string import ascii_lowercase
+import matplotlib.ticker as mtick
+
 
 
 import pdb
@@ -27,8 +31,8 @@ class Graph:
     def __init__(self, agents, connectivity, degree_of_shared_knowledge):
         self.number_of_agents = agents
         self.connectivity = connectivity
-        # self.G = complete_graph(agents)
-        self.G = self.create_graph()
+        self.G = nx.complete_graph(agents)
+        # self.G = self.create_graph()
         self.node_pos = nx.spring_layout(self.G, seed=self.number_of_agents)  # stores position of nodes
         self.color_map = np.empty(agents, str)  # stores node colors, needed for draw()
         self.all_agents_know = False
@@ -201,14 +205,16 @@ class Graph:
     '''
 
     def plot_data(self):
-        plt.clf()
-        plt.ylabel('Knowledgeable Agents')
-        plt.xlabel('Time step')
-        plt.title('Knowledgeable agents over time')
-        plt.plot(self.rumor_is_known, label='Knowledgeable Agents')
-        for idx, n in enumerate(self.dynamic_E_known):
-            plt.plot(n, label=f'{idx}_knowledgeable')
-
+        fig, ax = plt.subplots()
+        plt.ylabel('Percent Of All Agents')
+        plt.xlabel('Time Step')
+        plt.title('Rumor spreading over time')
+        rumor = [x / self.number_of_agents for x in map(float, self.rumor_is_known)]
+        ax.plot(rumor, '--',  label='Rumor is known')
+        for idx, item in enumerate(self.dynamic_E_known):
+            sn = [x / self.number_of_agents for x in map(float, item)]
+            ax.plot(sn, label=f'{idx}th order shared knowledge')
+        ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
         plt.legend()
         plt.show()
 
@@ -234,10 +240,10 @@ def simulate(agents, connectivity, degree_of_shared_knowledge):
 
 def main():
     args = parser.parse_args()
-    experiment_size = 6
-    agents = [10, 50, 100, 10, 50, 100]
-    connectivity = [2, 2, 2, 5, 5, 5]
-    degree_of_shared_knowledge = [10, 10, 10, 10, 10, 10]
+    experiment_size = 1
+    agents = [50]
+    connectivity = [25]
+    degree_of_shared_knowledge = [8]
     # agents = [10]
     # connectivity = [2]
     # degree_of_shared_knowledge = [10]
