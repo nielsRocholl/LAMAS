@@ -1,11 +1,15 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 from networkx.classes.function import degree
+from networkx.generators.classic import complete_graph
 from networkx.readwrite.json_graph import tree
 import numpy as np
 import argparse
 from itertools import repeat, combinations
 from string import ascii_lowercase
+
+
+import pdb
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-a', '--agents', type=int, help='Number of agents', default=10)
@@ -23,6 +27,7 @@ class Graph:
     def __init__(self, agents, connectivity, degree_of_shared_knowledge):
         self.number_of_agents = agents
         self.connectivity = connectivity
+        # self.G = complete_graph(agents)
         self.G = self.create_graph()
         self.node_pos = nx.spring_layout(self.G, seed=self.number_of_agents)  # stores position of nodes
         self.color_map = np.empty(agents, str)  # stores node colors, needed for draw()
@@ -110,36 +115,37 @@ class Graph:
                 if not self.G.nodes[agent][f'{n}']:
                     self.G.nodes[agent][f'{n}'] = [agent]
 
-                
-                # self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
-                # if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
-                #     self.G.nodes[agent][f'{n}_knows'] = True
+                self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.G.nodes[agent][f'{n}']
+                self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
+                if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
+                    self.G.nodes[agent][f'{n}_knows'] = True
 
-                self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.new_list(agent, previous_agent, n)
-
+                #self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.new_list(agent, previous_agent, n)
+            
             if n > 0:
-                if not self.G.nodes[agent][f'{n}'] and self.G.nodes[agent][f'{n - 1}_knows']:
-                    print(n)
+                if self.G.nodes[agent][f'{n}'] == [] and self.G.nodes[agent][f'{n - 1}_knows']:
                     self.G.nodes[agent][f'{n}'] = [agent]
 
+                self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.G.nodes[agent][f'{n}']
+                self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
+                if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
+                    self.G.nodes[agent][f'{n}_knows'] = True
 
-                # self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
-                # if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
-                #     self.G.nodes[agent][f'{n}_knows'] = True
+                #self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.new_list(agent, previous_agent, n)
 
-
-                self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.new_list(agent, previous_agent, n)
 
     def new_list(self, agent, previous_agent, n):
-        return list(set(self.G.nodes[agent][f'{n}_next_step_knowledge']) | set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[previous_agent][f'{n}']))
+        return list(set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[previous_agent][f'{n}_next_step_knowledge'])) #) list(set(self.G.nodes[agent][f'{n}_next_step_knowledge']) | set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[previous_agent][f'{n}']))
 
     def update_knowledge(self, agent):
+        
         for n in range(self.degree_of_shared_knowledge):
+            self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.G.nodes[agent][f'{n}']
 
-            self.G.nodes[agent][f'{n}'] = list(set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[agent][f'{n}_next_step_knowledge']))
+        #     self.G.nodes[agent][f'{n}'] = list(set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[agent][f'{n}_next_step_knowledge']))
 
-            if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
-                self.G.nodes[agent][f'{n}_knows'] = True
+        #     if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
+        #         self.G.nodes[agent][f'{n}_knows'] = True
 
     '''
     Spread rumor to all neighboring agents
@@ -151,6 +157,7 @@ class Graph:
         updateable_agents = []
 
         for knowledgeable_agent in agent_that_know:
+            self.update_knowledge(knowledgeable_agent)
             for agent in self.G.neighbors(knowledgeable_agent):
                 self.spread_rumor_to_single_agent2(agent, knowledgeable_agent)
                 updateable_agents.append(agent)
@@ -215,6 +222,8 @@ def simulate(agents, connectivity, degree_of_shared_knowledge):
     G = Graph(agents, connectivity, degree_of_shared_knowledge)
     G.spread_rumor_to_first_agent(random)
 
+    G.draw_graph()
+
     while not G.all_agents_know:
         # G.draw_graph()
         G.update(degree_of_shared_knowledge)
@@ -223,13 +232,13 @@ def simulate(agents, connectivity, degree_of_shared_knowledge):
 
 def main():
     args = parser.parse_args()
-    experiment_size = 1 # 3
-    # agents = [20, 40, 80]
-    # connectivity = [2, 10, 20]
-    # degree_of_shared_knowledge = [2, 4, 10]
-    agents = [5]
-    connectivity = [5]
-    degree_of_shared_knowledge = [10]
+    experiment_size = 6
+    agents = [10, 50, 100, 10, 50, 100]
+    connectivity = [2, 2, 2, 5, 5, 5]
+    degree_of_shared_knowledge = [10, 10, 10, 10, 10, 10]
+    # agents = [10]
+    # connectivity = [2]
+    # degree_of_shared_knowledge = [10]
 
 
     for experiment in range(experiment_size):
