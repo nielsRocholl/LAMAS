@@ -112,10 +112,11 @@ class Graph:
 
         for n in range(self.degree_of_shared_knowledge):
             if n == 0:
+                self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.G.nodes[agent][f'{n}']
+
                 if not self.G.nodes[agent][f'{n}']:
                     self.G.nodes[agent][f'{n}'] = [agent]
-
-                self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.G.nodes[agent][f'{n}']
+                
                 self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
                 if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
                     self.G.nodes[agent][f'{n}_knows'] = True
@@ -123,10 +124,11 @@ class Graph:
                 #self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.new_list(agent, previous_agent, n)
             
             if n > 0:
+                self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.G.nodes[agent][f'{n}']
+
                 if self.G.nodes[agent][f'{n}'] == [] and self.G.nodes[agent][f'{n - 1}_knows']:
                     self.G.nodes[agent][f'{n}'] = [agent]
 
-                self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.G.nodes[agent][f'{n}']
                 self.G.nodes[agent][f'{n}'] = self.new_list(agent, previous_agent, n)
                 if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
                     self.G.nodes[agent][f'{n}_knows'] = True
