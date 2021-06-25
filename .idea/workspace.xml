@@ -2,7 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e16f0f89-9dee-4569-8ed3-b15cc3292e54" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/Graph.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/a=10_c=25.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/a=10_c=5.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/a=10_c=complete.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/a=50_c=25.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/a=50_c=5.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/a=50_c=complete.png" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -18,6 +25,7 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectId" id="1uOQsUFvu91LFDCFzG1wvEUDHSg" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -37,6 +45,10 @@
       <option name="presentableId" value="Default" />
       <updated>1624534361458</updated>
       <workItem from="1624534362858" duration="3871000" />
+      <workItem from="1624564381772" duration="1318000" />
+      <workItem from="1624565714702" duration="13000" />
+      <workItem from="1624569765898" duration="330000" />
+      <workItem from="1624624911235" duration="510000" />
     </task>
     <servers />
   </component>
@@ -53,5 +65,6 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
 </project>

@@ -1,15 +1,10 @@
-import matplotlib
 import networkx as nx
 import matplotlib.pyplot as plt
 from matplotlib import ticker
-from networkx.classes.function import degree
 from networkx.generators.classic import complete_graph
-from networkx.readwrite.json_graph import tree
 import numpy as np
 import argparse
 from itertools import repeat, combinations
-from string import ascii_lowercase
-import matplotlib.ticker as mtick
 
 
 
@@ -31,8 +26,8 @@ class Graph:
     def __init__(self, agents, connectivity, degree_of_shared_knowledge):
         self.number_of_agents = agents
         self.connectivity = connectivity
-        self.G = nx.complete_graph(agents)
-        # self.G = self.create_graph()
+        # self.G = nx.complete_graph(agents)
+        self.G = self.create_graph()
         self.node_pos = nx.spring_layout(self.G, seed=self.number_of_agents)  # stores position of nodes
         self.color_map = np.empty(agents, str)  # stores node colors, needed for draw()
         self.all_agents_know = False
@@ -87,10 +82,8 @@ class Graph:
     def draw_graph(self):
         plt.figure(figsize=(9, 7))
         self.update_color_map()
-        # nx.draw(self.G, node_color=self.color_map, pos=self.node_pos)
         nx.draw_networkx_nodes(self.G, self.node_pos)
         nx.draw_networkx_edges(self.G, self.node_pos)
-        # nx.draw_networkx_labels(self.G, self.node_pos, self.labels)
         nx.draw_networkx_labels(self.G, self.node_pos, self.labels, font_size=16)
 
         plt.show(block=False)
@@ -125,8 +118,6 @@ class Graph:
                 if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
                     self.G.nodes[agent][f'{n}_knows'] = True
 
-                #self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.new_list(agent, previous_agent, n)
-            
             if n > 0:
                 self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.G.nodes[agent][f'{n}']
 
@@ -137,21 +128,16 @@ class Graph:
                 if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
                     self.G.nodes[agent][f'{n}_knows'] = True
 
-                #self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.new_list(agent, previous_agent, n)
 
 
     def new_list(self, agent, previous_agent, n):
-        return list(set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[previous_agent][f'{n}_next_step_knowledge'])) #) list(set(self.G.nodes[agent][f'{n}_next_step_knowledge']) | set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[previous_agent][f'{n}']))
+        return list(set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[previous_agent][f'{n}_next_step_knowledge']))
 
     def update_knowledge(self, agent):
         
         for n in range(self.degree_of_shared_knowledge):
             self.G.nodes[agent][f'{n}_next_step_knowledge'] = self.G.nodes[agent][f'{n}']
 
-        #     self.G.nodes[agent][f'{n}'] = list(set(self.G.nodes[agent][f'{n}']) | set(self.G.nodes[agent][f'{n}_next_step_knowledge']))
-
-        #     if set(self.G.nodes[agent][f'{n}']) == set(list(self.G.nodes)):
-        #         self.G.nodes[agent][f'{n}_knows'] = True
 
     '''
     Spread rumor to all neighboring agents
@@ -213,9 +199,10 @@ class Graph:
         ax.plot(rumor, '--',  label='Rumor is known')
         for idx, item in enumerate(self.dynamic_E_known):
             sn = [x / self.number_of_agents for x in map(float, item)]
-            ax.plot(sn, label=f'{idx}th order shared knowledge')
-        ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
+            ax.plot(sn, label=f'{idx+1}th order shared knowledge')
+        ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=0))
         plt.legend()
+        plt.grid()
         plt.show()
 
 
@@ -240,19 +227,7 @@ def simulate(agents, connectivity, degree_of_shared_knowledge):
 
 def main():
     args = parser.parse_args()
-    experiment_size = 1
-    agents = [50]
-    connectivity = [25]
-    degree_of_shared_knowledge = [8]
-    # agents = [10]
-    # connectivity = [2]
-    # degree_of_shared_knowledge = [10]
-
-
-    for experiment in range(experiment_size):
-        simulate(agents[experiment], connectivity[experiment], degree_of_shared_knowledge[experiment])
-
-    # simulate(args.agents, args.connectivity, args.degree_of_shared_knowledge)
+    simulate(args.agents, args.connectivity, args.degree_of_shared_knowledge)
 
 
 if __name__ == '__main__':
